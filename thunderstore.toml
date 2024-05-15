@@ -10,7 +10,7 @@ websiteUrl = "https://github.com/SGG-Modding/ENVY"
 containsNsfwContent = false
 
 [package.dependencies]
-Hell2Modding-Hell2Modding = "1.0.21"
+Hell2Modding-Hell2Modding = "1.0.22"
 
 [build]
 icon = "./icon.png"
