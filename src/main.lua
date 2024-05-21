@@ -10,7 +10,7 @@ do
 
 	local globals = getmetatable(_ENV).__index or _G
 
-	local binders = setmetatable( { }, { __mode = "k" } )
+	local binders = setmetatable({},{__mode = "k"})
 
 	local function getinternal( self, name )
 		local binder = binders[ self ]
@@ -117,12 +117,18 @@ do
 		end
 	end
 
+	local fallbacks = setmetatable({},{__mode = "k"})
+	local shared = setmetatable({},{__mode = "k"})
+
 	local function import_as_fallback(env,mod,fenv,level,...)
 		local level = (level or 1) + 1
 		if type(mod) ~= "table" then
 			mod = import(env,mod,fenv,level,...)
 		end
-
+		
+		fallbacks[env] = fallbacks[env] or setmetatable({},{__mode = "k"})
+		if fallbacks[env][mod] then return end
+		
 		local meta = getmetatable(env)
 		local _index = meta.__index
 		if type(_index) == "table" then
@@ -139,6 +145,7 @@ do
 			end
 		end
 		
+		fallbacks[env][mod] = true
 	end
 
 	local function import_as_shared(env,mod,fenv,level,...)
@@ -146,6 +153,9 @@ do
 		if type(mod) ~= "table" then
 			mod = import(env,mod,fenv,level,...)
 		end
+
+		shared[env] = shared[env] or setmetatable({},{__mode = "k"})
+		if shared[env][mod] then return end
 
 		local meta = getmetatable(env)
 		local _index = meta.__index
@@ -182,6 +192,8 @@ do
 				end
 			end
 		end
+		
+		shared[env][mod] = true
 	end
 
 	local private = setmetatable({},{__mode = 'k'})
@@ -263,7 +275,8 @@ do
 		-- binds
 		getmetatable, setmetatable, type, getupvalue, setupvalue, upvaluejoin, getinfo, 
 		-- tables
-		binders, internal, private, public, extra,
+		binders, fallbacks, shared, 
+		internal, private, public, extra,
 		locals, exports_private, exports,
 		-- functions
 		getinternal, setinternal, nextinternal, endow,

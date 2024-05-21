@@ -27,7 +27,7 @@ function import(file,fenv,...) end
     <br/> **Note**: These fields will never update, as they are shallow copied.
 
     Usage:
-        import_all(_ENV,"util.lua")
+        import_all("util.lua")
 --]]
 ---@see SGG_Modding-ENVY-auto.import how it obtains the data from the file/module
 ---@see SGG_Modding-ENVY-auto.import_as_fallback this, but without shallow copying.
@@ -44,7 +44,7 @@ function import_all(file,fenv,...) end
     <br/> **Note**: If you assign to these fields, they will no longer update.
 
     Usage:
-        import_all_fallback(_ENV,"shell.lua")
+        import_all_fallback("shell.lua")
 --]]
 ---@see SGG_Modding-ENVY-auto.import how it obtains the data from the file/module
 ---@see SGG_Modding-ENVY-auto.import_all this, but by shallow copying.
@@ -62,7 +62,7 @@ function import_as_fallback(file,fenv,...) end
     <br/> **Note**: If you assign to these fields, they will update the original too!
 
     Usage:
-        import_as_shared(_ENV,"state.lua")
+        import_as_shared("state.lua")
 --]]
 ---@see SGG_Modding-ENVY-auto.import how it obtains the data from the file/module
 ---@see SGG_Modding-ENVY-auto.import_all this, but by shallow copying.

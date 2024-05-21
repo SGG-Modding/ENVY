@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `import_as_fallback` and `import_as_shared`, so they can be hot reloaded in some situations
+- Fixed some usage examples in the definitions from `SGG_Modding-ENVY-auto`
+
 ## [1.0.0] - 2024-05-15
 
 ### Added
