@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2024-05-21
+
 ### Fixed
 
 - Fixed `import_as_fallback` and `import_as_shared`, so they can be hot reloaded in some situations
@@ -18,5 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Thunderstore release.
 
-[unreleased]: https://github.com/SGG-Modding/ENVY/compare/1.0.0...HEAD
+[unreleased]: https://github.com/SGG-Modding/ENVY/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/SGG-Modding/ENVY/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/SGG-Modding/ENVY/compare/6da071b5c4c8bb4458ed7ea5cb23e7f83d332911...1.0.0

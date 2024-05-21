@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "SGG_Modding"
 name = "ENVY"
-versionNumber = "1.0.0"
+versionNumber = "1.0.1"
 description = "A plugin to allow ReturnOfModding plugins greater control of their environment."
 websiteUrl = "https://github.com/SGG-Modding/ENVY"
 containsNsfwContent = false
