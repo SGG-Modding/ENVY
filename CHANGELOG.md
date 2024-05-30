@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added metatable-respecting extensions of builtin lua globals into the extras from `setup` or `auto`.
+
 ## [1.0.1] - 2024-05-21
 
 ### Fixed

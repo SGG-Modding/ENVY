@@ -1,12 +1,12 @@
 ---@meta _
 ---@diagnostic disable
 
-local auto, locals, exports_private, exports
+local locals, auto, setup, exports_private, exports
 
 do
 
-	local getmetatable, setmetatable, type, traceback, getupvalue, setupvalue, upvaluejoin, getinfo, pack, unpack
-		= getmetatable, setmetatable, type, debug.traceback, debug.getupvalue, debug.setupvalue, debug.upvaluejoin, debug.getinfo, table.pack, table.unpack
+	local getmetatable, setmetatable, type, traceback, getupvalue, setupvalue, upvaluejoin, getinfo, pack, unpack, error, pcall, xpcall, rawget, rawset, rawlen, tostring, pairs, ipairs, table
+		= getmetatable, setmetatable, type, debug.traceback, debug.getupvalue, debug.setupvalue, debug.upvaluejoin, debug.getinfo, table.pack, table.unpack, error, pcall, xpcall, rawget, rawset, rawlen, tostring, pairs, ipairs, table
 
 	local globals = getmetatable(_ENV).__index or _G
 
@@ -200,19 +200,26 @@ do
 	local public = setmetatable({},{__mode = 'v'})
 	local extra = setmetatable({},{__mode = 'kv'})
 
-	local function endow(env,mod)
-		return {
+	local function extras(env,mod)
+		local extras = {}
+		for k,v in pairs(exports) do
+			extras[k] = v
+		end
+		local binds = {
 			import = function(file,fenv,...) return import(mod,file,fenv,2,...) end;
 			import_all = function(file,fenv,...) return import_all(mod,file,fenv,2,...) end;
 			import_as_shared = function(file,fenv,...) return import_as_shared(mod,file,fenv,2,...) end;
 			import_as_fallback = function(file,fenv,...) return import_as_fallback(mod,file,fenv,2,...) end;
 			private = mod;
 			public = env;
-			export = export;
 		}
+		for k,v in pairs(binds) do
+			extras[k] = v
+		end
+		return extras
 	end
 
-	local function setup(env)
+	function setup(env)
 		local mod = private[env]
 		if mod ~= nil then return mod end
 		mod = setmetatable({},{__index = env})
@@ -220,7 +227,7 @@ do
 		private[mod] = mod
 		public[mod] = env
 		public[env] = env
-		local ext = endow(env,mod)
+		local ext = extras(env,mod)
 		extra[env] = ext
 		extra[mod] = ext
 		return mod, ext
@@ -257,6 +264,183 @@ do
 		until not name
 	end
 
+	local function getname( )
+		return debug.getinfo( 2, "n" ).name  or "?"
+	end
+
+	local function pusherror( f, ... )
+		local ret = table.pack( pcall( f, ... ) )
+		if ret[ 1 ] then return unpack( ret, 2, ret.n ) end
+		error( ret[ 2 ], 3 )
+	end
+
+	-- doesn't invoke __index
+	local rawnext = next
+
+	-- invokes __next
+	local function next( t, k )
+		local m = debug.getmetatable( t )
+		local f = m and rawget(m,'__next') or rawnext
+		return pusherror( f, t, k )
+	end
+
+	-- truly raw pairs, ignores __next and __pairs
+	local function rawpairs( t )
+		return rawnext, t
+	end
+
+	-- quasi-raw pairs, invokes __next but ignores __pairs
+	local function qrawpairs( t )
+		return next, t
+	end
+
+	-- doesn't invoke __index just like rawnext
+	local function rawinext( t, i )
+
+		if type( t ) ~= "table" then
+			error( "bad argument #1 to '" .. getname( ) .. "'(table expected got " .. type( i ) ..")", 2 )
+		end
+
+		if i == nil then
+			i = 0
+		elseif type( i ) ~= "number" then
+			error( "bad argument #2 to '" .. getname( ) .. "'(number expected got " .. type( i ) ..")", 2 )
+		elseif i < 0 then
+			error( "bad argument #2 to '" .. getname( ) .. "'(index out of bounds, too low)", 2 )
+		end
+
+		i = i + 1
+		local v = rawget( t, i )
+		if v ~= nil then
+			return i, v
+		end
+	end
+
+	local rawinext = rawinext
+
+	-- invokes __inext
+	local function inext( t, i )
+		local m = debug.getmetatable( t )
+		local f = m and rawget(m,'__inext') or rawinext
+		return pusherror( f, t, i )
+	end
+
+	-- truly raw ipairs, ignores __inext and __ipairs
+	local function rawipairs( t )
+		return function( self, key )
+			return rawinext( self, key )
+		end, t, nil
+	end
+
+	-- quasi-raw ipairs, invokes __inext but ignores __ipairs
+	local function qrawipairs( t )
+		return function( self, key )
+			return inext( self, key )
+		end, t, nil
+	end
+
+	-- ignore __tostring (not thread safe?)
+	local function rawtostring(t)
+		-- https://stackoverflow.com/a/43286713
+		local m = getmetatable( t )
+		local f
+		if m then
+			f = m.__tostring
+			m.__tostring = nil
+		end
+		local s = tostring( t )
+		if m then
+			m.__tostring = f
+		end
+		return s
+	end
+
+	local rawtable = table
+	table = { }
+	for k,v in pairs( rawtable ) do
+		table[k] = v
+	end
+
+	table.rawinsert = table.insert
+	local rawinsert = table.rawinsert
+	-- table.insert that respects metamethods
+	function table.insert( list, pos, value )
+		local last = #list
+		if value == nil then
+			value = pos
+			pos = last + 1
+		end
+		if pos < 1 or pos > last + 1 then
+			error( "bad argument #2 to '" .. getname( ) .. "' (position out of bounds)", 2 )
+		end
+		if pos <= last then
+			local i = last
+			repeat
+				list[ i + 1 ] = list[ i ]
+				i = i - 1
+			until i < pos
+		end
+		list[ pos ] = value
+	end
+
+	table.rawremove = table.remove
+	-- table.remove that respects metamethods
+	function table.remove( list, pos )
+		local last = #list
+		if pos == nil then
+			pos = last
+		end
+		if pos < 0 or pos > last + 1 then
+			error( "bad argument #2 to '" .. getname( ) .. "' (position out of bounds)", 2 )
+		end
+		local value = list[ pos ]
+		if pos <= last then
+			local i = pos
+			repeat
+				list[ i ] = list[ i + 1 ]
+				i = i + 1
+			until i > last
+		end
+		return value
+	end
+
+	table.rawunpack = unpack
+	-- table.unpack that respects metamethods
+	do
+		local function _unpack( t, m, i, ... )
+			if i < m then return ... end
+			return _unpack( t, m, i - 1, t[ i ], ... )
+		end
+		
+		---@type fun( list, i?, j? ): any
+		---@diagnostic disable-next-line: duplicate-set-field
+		function table.unpack( list, i, j )
+			return _unpack( list, i or 1, j or list.n or #list or 1 )
+		end
+	end
+
+	local rawconcat = table.concat
+	table.rawconcat = rawconcat
+	-- table.concat that respects metamethods and includes more values
+	do
+		local wt = setmetatable( { }, { __mode = 'v' } )
+		function table.concat( tbl, sep, i, j )
+			i = i or 1
+			j = j or tbl.n or #tbl
+			if i > j then return "" end
+			sep = sep or ""
+			for k = i, j, 1 do
+				rawset( wt, k, tostring( tbl[ k ] ) )
+			end
+			return rawconcat( wt, sep, i, j )
+		end
+	end
+
+	--[[
+		NOTE: Other table functions that need to get updated to respect metamethods
+		- table.sort
+	--]]
+
 	function auto(level)
 		level = (level or 1) + 1
 		local env = getfenv(level)
@@ -273,7 +457,8 @@ do
 		-- environment
 		return _ENV,
 		-- binds
-		getmetatable, setmetatable, type, getupvalue, setupvalue, upvaluejoin, getinfo, 
+		getmetatable, setmetatable, type, traceback, getupvalue, setupvalue, upvaluejoin, getinfo, pack, unpack, error, pcall, xpcall, rawget, rawset, rawlen, tostring, pairs, ipairs, table,
+		rawtable,
 		-- tables
 		binders, fallbacks, shared, 
 		internal, private, public, extra,
@@ -284,7 +469,9 @@ do
 	end)
 
 	exports = export(function()
-		return globals, export, import, import_all, import_as_fallback, import_as_shared, setup, auto, getfenv, setfenv
+		return globals, export, import, import_all, import_as_fallback, import_as_shared, getfenv, setfenv,
+		-- global extensions
+		table, next, rawnext, inext, rawinext, rawtostring, rawpairs, rawipairs, qrawpairs, qrawipairs
 	end)
 
 end
@@ -299,3 +486,5 @@ for k,v in pairs(exports) do
 end
 
 public.locals = locals
+public.setup = setup
+public.auto = auto
