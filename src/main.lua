@@ -8,7 +8,11 @@ do
 	local getmetatable, setmetatable, type, traceback, getupvalue, setupvalue, upvaluejoin, getinfo, pack, unpack, error, pcall, xpcall, rawget, rawset, rawlen, tostring, pairs, ipairs, table
 		= getmetatable, setmetatable, type, debug.traceback, debug.getupvalue, debug.setupvalue, debug.upvaluejoin, debug.getinfo, table.pack, table.unpack, error, pcall, xpcall, rawget, rawset, rawlen, tostring, pairs, ipairs, table
 
-	local globals = getmetatable(_ENV).__index or _G
+	local globals = _ENV or _G
+	do
+		local meta = getmetatable(globals)
+		globals = meta and meta.__index or _G
+	end
 
 	local binders = setmetatable({},{__mode = "k"})
 
@@ -233,35 +237,41 @@ do
 		return mod, ext
 	end
 
-	local function getfenv( fn )
-		if type( fn ) ~= "function" then
-			fn = debug.getinfo( ( fn or 1 ) + 1, "f" ).func
-		end
-		local i = 0
-		repeat
-			i = i + 1
-			local name, val = debug.getupvalue( fn, i )
-			if name == "_ENV" then
-				return val
+	local getfenv = getfenv
+	if getfenv == nil then
+		function getfenv( fn )
+			if type( fn ) ~= "function" then
+				fn = debug.getinfo( ( fn or 1 ) + 1, "f" ).func
 			end
-		until not name
+			local i = 0
+			repeat
+				i = i + 1
+				local name, val = debug.getupvalue( fn, i )
+				if name == "_ENV" then
+					return val
+				end
+			until not name
+		end
 	end
 
-	local function setfenv( fn, env )
-		if type( fn ) ~= "function" then
-			fn = debug.getinfo( ( fn or 1 ) + 1, "f" ).func
-		end
-		local i = 0
-		repeat
-			i = i + 1
-			local name = debug.getupvalue( fn, i )
-			if name == "_ENV" then
-				debug.upvaluejoin( fn, i, ( function( )
-					return env
-				end ), 1 )
-				return env
+	local setfenv = setfenv
+	if setfenv == nil then
+		function setfenv( fn, env )
+			if type( fn ) ~= "function" then
+				fn = debug.getinfo( ( fn or 1 ) + 1, "f" ).func
 			end
-		until not name
+			local i = 0
+			repeat
+				i = i + 1
+				local name = debug.getupvalue( fn, i )
+				if name == "_ENV" then
+					debug.upvaluejoin( fn, i, ( function( )
+						return env
+					end ), 1 )
+					return env
+				end
+			until not name
+		end
 	end
 
 	local function getname( )
@@ -455,7 +465,7 @@ do
 
 	locals = export(function()
 		-- environment
-		return _ENV,
+		return _ENV, -- note that in some versions _ENV is not an upvalue so will not be exported
 		-- binds
 		getmetatable, setmetatable, type, traceback, getupvalue, setupvalue, upvaluejoin, getinfo, pack, unpack, error, pcall, xpcall, rawget, rawset, rawlen, tostring, pairs, ipairs, table,
 		rawtable,
