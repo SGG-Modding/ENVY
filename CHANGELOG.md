@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- This plugin redirects to LuaENVY-ENVY, which should be the dependency going forward.
+
 ## [1.1.0] - 2024-06-03
 
 ### Added
