@@ -10,7 +10,7 @@ websiteUrl = "https://github.com/SGG-Modding/ENVY"
 containsNsfwContent = false
 
 [package.dependencies]
-LuaENVY-ENVY = "1.2.0"
+LuaENVY-ENVY = "1.2.1"
 
 [build]
 icon = "./icon.png"
